@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pyroscope-nodeport
+  labels:
+    app.kubernetes.io/name: pyroscope
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 4040
+    targetPort: http
+    nodePort: 30404
+  - name: grpc
+    port: 9095
+    targetPort: grpc
+    nodePort: 30905
+  # memberlist (7946) 为集群内部协调端口，不对外暴露
+  selector:
+    app.kubernetes.io/name: pyroscope
