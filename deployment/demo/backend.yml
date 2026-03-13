@@ -1,4 +1,20 @@
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-backend-nginx
+  labels:
+    app: demo-backend
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      location / {
+        return 200 'Hello from backend!\n';
+        add_header Content-Type text/plain;
+      }
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,12 +33,13 @@ spec:
     spec:
       containers:
         - name: backend
-          image: hashicorp/http-echo:latest
-          args:
-            - "-listen=:8080"
-            - "-text=Hello from backend!"
+          image: nginx:alpine
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
           resources:
             requests:
               cpu: 10m
@@ -30,6 +47,10 @@ spec:
             limits:
               cpu: 100m
               memory: 64Mi
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: demo-backend-nginx
 ---
 apiVersion: v1
 kind: Service
