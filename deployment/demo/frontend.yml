@@ -1,0 +1,92 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-frontend
+  labels:
+    app: demo-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-frontend
+  template:
+    metadata:
+      labels:
+        app: demo-frontend
+    spec:
+      containers:
+        - name: frontend
+          # Uses a minimal image that runs an HTTP server on 8080
+          # and periodically calls demo-backend via a sidecar curl loop
+          image: nginx:alpine
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+        - name: load-gen
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting load generator..."
+              while true; do
+                # Frontend calls backend (simulates service-to-service call)
+                curl -s http://demo-backend:8080/ > /dev/null
+                # Also call itself (to appear as a standalone service node)
+                curl -s http://demo-frontend:8080/ > /dev/null
+                sleep 3
+              done
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: demo-frontend-nginx
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-frontend-nginx
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      location / {
+        return 200 'Hello from frontend!\n';
+        add_header Content-Type text/plain;
+      }
+      # Proxy /api to backend to show a dependency
+      location /api {
+        proxy_pass http://demo-backend:8080/;
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-frontend
+  labels:
+    app: demo-frontend
+spec:
+  selector:
+    app: demo-frontend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

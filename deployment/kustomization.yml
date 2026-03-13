@@ -20,3 +20,4 @@ resources:
 - pyroscope/
 - beyla/
 - nodeport/
+- demo/

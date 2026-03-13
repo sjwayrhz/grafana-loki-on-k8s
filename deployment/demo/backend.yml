@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-backend
+  labels:
+    app: demo-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-backend
+  template:
+    metadata:
+      labels:
+        app: demo-backend
+    spec:
+      containers:
+        - name: backend
+          image: hashicorp/http-echo:latest
+          args:
+            - "-listen=:8080"
+            - "-text=Hello from backend!"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-backend
+  labels:
+    app: demo-backend
+spec:
+  selector:
+    app: demo-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
